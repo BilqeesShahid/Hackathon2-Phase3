@@ -72,7 +72,7 @@ async def health_check():
 async def root():
     """Root endpoint - API welcome message."""
     return {
-        "message": "Welcome to Evolution of Todo API",
+        "message": "Phase3: Welcome to Evolution of Todo API",
         "title": "Evolution of Todo API",
         "version": "1.0.0",
         "docs": "/docs",
