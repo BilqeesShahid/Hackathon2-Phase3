@@ -1,0 +1,180 @@
+"use client";
+
+import { useState } from "react";
+import { TaskResponse, updateTask, deleteTask, toggleComplete } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+
+interface TaskItemProps {
+  task: TaskResponse;
+  onTaskUpdated: () => void;
+  onTaskDeleted: () => void;
+}
+
+export function TaskItem({ task, onTaskUpdated, onTaskDeleted }: TaskItemProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title);
+  const [editDescription, setEditDescription] = useState(task.description || "");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { session } = useAuth();
+
+  const token = (session as any)?.token || "";
+
+  async function handleToggleComplete() {
+    setIsLoading(true);
+    try {
+      await toggleComplete(task.user_id, task.id, token);
+      onTaskUpdated();
+    } catch (err) {
+      console.error("Failed to toggle completion:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleSave() {
+    setIsLoading(true);
+    try {
+      await updateTask(task.user_id, task.id, {
+        title: editTitle,
+        description: editDescription || undefined,
+      }, token);
+      setIsEditing(false);
+      onTaskUpdated();
+    } catch (err) {
+      console.error("Failed to update task:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    setIsLoading(true);
+    try {
+      await deleteTask(task.user_id, task.id, token);
+      onTaskDeleted();
+    } catch (err) {
+      console.error("Failed to delete task:", err);
+    } finally {
+      setIsLoading(false);
+      setShowDeleteConfirm(false);
+    }
+  }
+
+  if (isEditing) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-4 mb-3 border border-purple-100">
+        <input
+          type="text"
+          value={editTitle}
+          onChange={(e) => setEditTitle(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg mb-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        />
+        <textarea
+          value={editDescription}
+          onChange={(e) => setEditDescription(e.target.value)}
+          rows={2}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={handleSave}
+            disabled={isLoading}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50"
+          >
+            Save
+          </button>
+          <button
+            onClick={() => setIsEditing(false)}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (showDeleteConfirm) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-4 mb-3 border border-red-200">
+        <p className="text-gray-700 mb-4">Are you sure you want to delete this task?</p>
+        <div className="flex gap-2">
+          <button
+            onClick={handleDelete}
+            disabled={isLoading}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-50"
+          >
+            Yes, Delete
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`bg-white rounded-xl shadow-md p-4 mb-3 transition-all hover:shadow-lg ${task.completed ? "opacity-60" : ""}`}
+    >
+      <div className="flex items-start gap-3">
+        <button
+          onClick={handleToggleComplete}
+          disabled={isLoading}
+          className={`mt-1 flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${task.completed ? "bg-green-500 border-green-500" : "border-gray-300 hover:border-purple-500"}`}
+        >
+          {task.completed && (
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold flex-shrink-0">
+              #{task.id}
+            </span>
+            <h3
+              className={`text-lg font-medium truncate ${task.completed ? "line-through text-gray-400" : "text-gray-800"}`}
+            >
+              {task.title}
+            </h3>
+          </div>
+          {task.description && (
+            <p className={`text-sm mt-1 ${task.completed ? "text-gray-400" : "text-gray-600"}`}>
+              {task.description}
+            </p>
+          )}
+          <p className="text-xs text-gray-400 mt-2">
+            {new Date(task.created_at).toLocaleDateString()}
+          </p>
+        </div>
+        <div className="flex gap-2 flex-shrink-0">
+          <button
+            onClick={() => setIsEditing(true)}
+            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title="Edit"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

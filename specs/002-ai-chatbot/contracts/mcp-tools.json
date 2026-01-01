@@ -1,0 +1,391 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "MCP Tools Schema for Todo Chatbot",
+  "description": "JSON Schema definitions for all MCP tools used by the AI agent to interact with the task management system",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "add_task",
+      "description": "Create a new task for the authenticated user",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "The authenticated user's ID (from JWT token)",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "The task title",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional task description",
+            "maxLength": 5000
+          }
+        },
+        "required": ["user_id", "title"],
+        "additionalProperties": false
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "The created task's ID"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "completed": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["id", "user_id", "title", "completed", "created_at", "updated_at"]
+      },
+      "errors": [
+        {
+          "code": "VALIDATION_ERROR",
+          "message": "Invalid parameters: {details}",
+          "status": 400
+        },
+        {
+          "code": "UNAUTHORIZED",
+          "message": "Invalid or missing user_id",
+          "status": 401
+        }
+      ]
+    },
+    {
+      "name": "list_tasks",
+      "description": "Retrieve all tasks for the authenticated user with optional filtering",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "The authenticated user's ID (from JWT token)",
+            "minLength": 1
+          },
+          "filter": {
+            "type": "string",
+            "enum": ["all", "pending", "completed"],
+            "default": "all",
+            "description": "Filter tasks by completion status"
+          }
+        },
+        "required": ["user_id"],
+        "additionalProperties": false
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "user_id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "completed": {
+                  "type": "boolean"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": ["id", "user_id", "title", "completed", "created_at", "updated_at"]
+            }
+          },
+          "count": {
+            "type": "integer",
+            "description": "Total number of tasks returned"
+          }
+        },
+        "required": ["tasks", "count"]
+      },
+      "errors": [
+        {
+          "code": "VALIDATION_ERROR",
+          "message": "Invalid filter parameter",
+          "status": 400
+        },
+        {
+          "code": "UNAUTHORIZED",
+          "message": "Invalid or missing user_id",
+          "status": 401
+        }
+      ]
+    },
+    {
+      "name": "update_task",
+      "description": "Update an existing task's title and/or description",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "The authenticated user's ID (from JWT token)",
+            "minLength": 1
+          },
+          "task_id": {
+            "type": "integer",
+            "description": "The ID of the task to update",
+            "minimum": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "New task title (optional)",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "description": {
+            "type": "string",
+            "description": "New task description (optional)",
+            "maxLength": 5000
+          }
+        },
+        "required": ["user_id", "task_id"],
+        "minProperties": 3,
+        "additionalProperties": false
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "completed": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["id", "user_id", "title", "completed", "created_at", "updated_at"]
+      },
+      "errors": [
+        {
+          "code": "VALIDATION_ERROR",
+          "message": "At least one of title or description must be provided",
+          "status": 400
+        },
+        {
+          "code": "NOT_FOUND",
+          "message": "Task not found",
+          "status": 404
+        },
+        {
+          "code": "UNAUTHORIZED",
+          "message": "Invalid or missing user_id",
+          "status": 401
+        },
+        {
+          "code": "FORBIDDEN",
+          "message": "Task does not belong to user",
+          "status": 403
+        }
+      ]
+    },
+    {
+      "name": "complete_task",
+      "description": "Mark a task as completed",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "The authenticated user's ID (from JWT token)",
+            "minLength": 1
+          },
+          "task_id": {
+            "type": "integer",
+            "description": "The ID of the task to complete",
+            "minimum": 1
+          }
+        },
+        "required": ["user_id", "task_id"],
+        "additionalProperties": false
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "completed": {
+            "type": "boolean",
+            "const": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["id", "user_id", "title", "completed", "created_at", "updated_at"]
+      },
+      "errors": [
+        {
+          "code": "NOT_FOUND",
+          "message": "Task not found",
+          "status": 404
+        },
+        {
+          "code": "UNAUTHORIZED",
+          "message": "Invalid or missing user_id",
+          "status": 401
+        },
+        {
+          "code": "FORBIDDEN",
+          "message": "Task does not belong to user",
+          "status": 403
+        },
+        {
+          "code": "ALREADY_COMPLETED",
+          "message": "Task is already completed",
+          "status": 400
+        }
+      ]
+    },
+    {
+      "name": "delete_task",
+      "description": "Permanently delete a task",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "The authenticated user's ID (from JWT token)",
+            "minLength": 1
+          },
+          "task_id": {
+            "type": "integer",
+            "description": "The ID of the task to delete",
+            "minimum": 1
+          }
+        },
+        "required": ["user_id", "task_id"],
+        "additionalProperties": false
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string",
+            "description": "Confirmation message"
+          },
+          "task_id": {
+            "type": "integer",
+            "description": "ID of the deleted task"
+          }
+        },
+        "required": ["success", "message", "task_id"]
+      },
+      "errors": [
+        {
+          "code": "NOT_FOUND",
+          "message": "Task not found",
+          "status": 404
+        },
+        {
+          "code": "UNAUTHORIZED",
+          "message": "Invalid or missing user_id",
+          "status": 401
+        },
+        {
+          "code": "FORBIDDEN",
+          "message": "Task does not belong to user",
+          "status": 403
+        }
+      ]
+    }
+  ],
+  "security": {
+    "user_validation": {
+      "description": "All MCP tools MUST validate user_id parameter",
+      "requirements": [
+        "user_id parameter is required for all tools",
+        "user_id must match authenticated user from JWT token",
+        "Tools must reject requests without valid user_id",
+        "Ownership validation must occur before any CRUD operation",
+        "Error messages must not expose other users' data"
+      ]
+    },
+    "error_handling": {
+      "description": "Security-conscious error handling",
+      "requirements": [
+        "Use generic 'Task not found' for both missing tasks and ownership failures",
+        "Never reveal existence of other users' tasks",
+        "Log security-relevant events (failed ownership checks)",
+        "Return 403 only when task exists but user doesn't own it (internal only)"
+      ]
+    }
+  }
+}

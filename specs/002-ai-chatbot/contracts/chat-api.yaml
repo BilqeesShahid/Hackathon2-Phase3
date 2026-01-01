@@ -1,0 +1,256 @@
+openapi: 3.0.3
+info:
+  title: Todo Chatbot API
+  description: |
+    REST API for AI-powered todo chatbot.
+    Enables natural language task management through conversational interface.
+  version: 3.0.0
+  contact:
+    name: Phase III - AI Chatbot
+
+servers:
+  - url: https://api.example.com
+    description: Production server
+  - url: http://localhost:8000
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/{user_id}/chat:
+    post:
+      summary: Send chat message
+      description: |
+        Send a chat message to the AI assistant for task management.
+        The assistant understands natural language and performs CRUD operations on tasks.
+
+        **Stateless Design**: All conversation history is loaded from database on each request.
+
+        **Request Flow**:
+        1. Validate JWT token
+        2. Load conversation history (if conversation_id provided)
+        3. Append user message to history
+        4. Run OpenAI Agent (with subagents + skills)
+        5. Execute MCP tool(s) as needed
+        6. Store assistant response in database
+        7. Return response to client
+      operationId: sendChatMessage
+      tags:
+        - Chat
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: The authenticated user's ID (must match JWT token)
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+            examples:
+              newConversation:
+                summary: Start new conversation
+                value:
+                  message: "Show me my tasks"
+                  conversation_id: null
+              continueConversation:
+                summary: Continue existing conversation
+                value:
+                  message: "Complete the first one"
+                  conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+              addTask:
+                summary: Add a new task
+                value:
+                  message: "Add buy groceries"
+                  conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Successful response from AI assistant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+              examples:
+                taskList:
+                  summary: Task list response
+                  value:
+                    response: "Here are your tasks:\n1. Buy groceries (pending)\n2. Call dentist (pending)\n3. Pay bills (completed)"
+                    conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+                taskAdded:
+                  summary: Task added confirmation
+                  value:
+                    response: "✅ Task 'buy groceries' added."
+                    conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+                taskCompleted:
+                  summary: Task completed confirmation
+                  value:
+                    response: "✅ Task 1 'Buy groceries' marked as complete."
+                    conversation_id: "550e8400-e29b-41d4-a716-446655440000"
+        '400':
+          description: Bad request (invalid input)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "VALIDATION_ERROR"
+                message: "Message cannot be empty"
+                details:
+                  field: "message"
+                  issue: "required field missing"
+        '401':
+          description: Unauthorized (invalid or missing JWT)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "UNAUTHORIZED"
+                message: "Invalid or expired JWT token"
+        '403':
+          description: Forbidden (user_id mismatch)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "FORBIDDEN"
+                message: "user_id in path does not match authenticated user"
+        '404':
+          description: Conversation not found or doesn't belong to user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "NOT_FOUND"
+                message: "Conversation not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "INTERNAL_ERROR"
+                message: "An unexpected error occurred"
+        '503':
+          description: Service unavailable (OpenAI API down)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "SERVICE_UNAVAILABLE"
+                message: "AI service temporarily unavailable"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token issued by Better Auth.
+        Include in Authorization header: `Bearer <token>`
+
+  schemas:
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: User's natural language message
+          minLength: 1
+          maxLength: 5000
+          example: "Show me my tasks"
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: |
+            UUID of existing conversation to continue.
+            If null, a new conversation will be created.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+
+    ChatResponse:
+      type: object
+      required:
+        - response
+        - conversation_id
+      properties:
+        response:
+          type: string
+          description: AI assistant's response to the user message
+          example: "✅ Task 'buy groceries' added."
+        conversation_id:
+          type: string
+          format: uuid
+          description: UUID of the conversation (new or existing)
+          example: "550e8400-e29b-41d4-a716-446655440000"
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code identifier
+          enum:
+            - VALIDATION_ERROR
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+            - INTERNAL_ERROR
+            - SERVICE_UNAVAILABLE
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Message cannot be empty"
+        details:
+          type: object
+          description: Additional error details (optional)
+          additionalProperties: true
+          example:
+            field: "message"
+            issue: "required field missing"
+
+  examples:
+    naturalLanguageExamples:
+      summary: Supported natural language patterns
+      value:
+        add_task:
+          - "Add buy milk"
+          - "Create task: call dentist"
+          - "I need to remember to pay bills"
+        list_tasks:
+          - "Show my tasks"
+          - "What do I need to do?"
+          - "List all todos"
+          - "Show me pending tasks"
+        update_task:
+          - "Change task 3 to buy organic groceries"
+          - "Update the first task to buy milk"
+          - "Rename task 2"
+        complete_task:
+          - "Mark task 2 as done"
+          - "Complete task 1"
+          - "Done with task 3"
+          - "I completed buying groceries"
+        delete_task:
+          - "Delete task 4"
+          - "Remove task 2"
+          - "Get rid of task about groceries"
+
+tags:
+  - name: Chat
+    description: Conversational interface for task management
