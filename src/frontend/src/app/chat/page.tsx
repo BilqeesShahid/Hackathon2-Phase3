@@ -12,12 +12,17 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth-context";
 import ChatInterface from "../../components/ChatInterface";
 import { ConversationHistorySidebar } from "../../components/ConversationHistorySidebar";
+import { MobileSidebar } from "../../components/MobileSidebar";
 
 export default function ChatPage() {
   const { user, session, isLoading, signOut } = useAuth();
   const router = useRouter();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [conversationKey, setConversationKey] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Extract username from email (part before @)
+  const username = user?.email ? user.email.split('@')[0] : '';
 
   useEffect(() => {
     if (!isLoading && !session) {
@@ -54,6 +59,9 @@ export default function ChatPage() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-pink-600">
+      {/* Mobile Menu */}
+      <MobileSidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+
       {/* Header */}
       <header className="flex-shrink-0 bg-gradient-to-r from-purple-300/95 via-pink-300/95 to-purple-300/95 backdrop-blur-sm shadow-lg border-b border-purple-400/70 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -69,12 +77,24 @@ export default function ChatPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-medium text-purple-950">{user.email}</p>
+            <div className="text-right hidden md:block">
+              <p className="text-sm font-medium text-purple-950">Welcome, {username}</p>
+              <p className="text-xs text-purple-800 truncate max-w-[150px]">{user.email}</p>
+            </div>
+            <div className="md:hidden">
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="p-2 rounded-lg hover:bg-purple-200 transition-colors"
+                aria-label="Open menu"
+              >
+                <svg className="w-6 h-6 text-purple-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
             </div>
             <button
               onClick={() => router.push("/")}
-              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all shadow-md hover:shadow-lg items-center gap-2 font-medium"
+              className="hidden md:flex px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all shadow-md hover:shadow-lg items-center gap-2 font-medium"
             >
               <svg className="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -83,7 +103,7 @@ export default function ChatPage() {
             </button>
             <button
               onClick={handleSignOut}
-              className="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg hover:from-red-600 hover:to-pink-600 transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium"
+              className="hidden md:flex px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg hover:from-red-600 hover:to-pink-600 transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -96,8 +116,8 @@ export default function ChatPage() {
 
       {/* Chat Interface Container - Fixed height, independent scrolling */}
       <main className="flex-1 flex overflow-hidden relative z-10">
-        {/* Sidebar Container - Independent scroll */}
-        <div className="flex-shrink-0 w-80 bg-white shadow-xl overflow-hidden">
+        {/* Sidebar Container - Independent scroll - Hidden on mobile, shown on medium screens and up */}
+        <div className="hidden md:flex md:shrink-0 md:w-80 bg-white shadow-xl overflow-hidden">
           <ConversationHistorySidebar
             currentConversationId={selectedConversationId}
             onSelectConversation={handleSelectConversation}
@@ -105,8 +125,8 @@ export default function ChatPage() {
           />
         </div>
 
-        {/* Chat Window Container - Independent scroll */}
-        <div className="flex-1 bg-white overflow-hidden">
+        {/* Chat Window Container - Full width on mobile, flex-1 on medium screens and up */}
+        <div className="flex-1 w-full md:w-auto bg-white overflow-hidden">
           <ChatInterface
             key={conversationKey}
             selectedConversationId={selectedConversationId}

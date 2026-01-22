@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth-context";
 import { TaskList } from "../components/TaskList";
 import { Sidebar } from "../components/Sidebar";
+import { MobileSidebar } from "../components/MobileSidebar";
 import { TaskResponse, getTasks } from "@/lib/api";
 
 export default function DashboardPage() {
@@ -15,6 +16,10 @@ export default function DashboardPage() {
   const [tasksLoading, setTasksLoading] = useState(true);
   const [error, setError] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Extract username from email (part before @)
+  const username = user?.email ? user.email.split('@')[0] : '';
 
   useEffect(() => {
     if (!isLoading && !session) {
@@ -80,6 +85,9 @@ export default function DashboardPage() {
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
+      {/* Mobile Menu */}
+      <MobileSidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen lg:ml-64">
         {/* Background Image with Overlay */}
@@ -95,14 +103,7 @@ export default function DashboardPage() {
         <header className="bg-gradient-to-r from-purple-300/95 via-pink-300/95 to-purple-300/95 backdrop-blur-sm shadow-lg border-b border-purple-400/70 relative z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-lg hover:bg-purple-200 transition-colors"
-              >
-                <svg className="w-6 h-6 text-purple-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
+              
               <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -111,12 +112,24 @@ export default function DashboardPage() {
               <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-900 to-pink-900 bg-clip-text text-transparent">TaskMaster</h1>
             </div>
             <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-purple-950">{user.email}</p>
+              <div className="text-right hidden md:block">
+                <p className="text-sm font-medium text-purple-950">Welcome, {username}</p>
+                <p className="text-xs text-purple-800 truncate max-w-[150px]">{user.email}</p>
+              </div>
+              <div className="md:hidden">
+                <button
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="p-2 rounded-lg hover:bg-purple-200 transition-colors"
+                  aria-label="Open menu"
+                >
+                  <svg className="w-6 h-6 text-purple-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
               </div>
               <button
                 onClick={() => router.push("/chat")}
-                className="hidden sm:flex px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all shadow-md hover:shadow-lg items-center gap-2 font-medium"
+                className="hidden md:flex px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all shadow-md hover:shadow-lg items-center gap-2 font-medium"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -125,7 +138,7 @@ export default function DashboardPage() {
               </button>
               <button
                 onClick={handleSignOut}
-                className="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg hover:from-red-600 hover:to-pink-600 transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium"
+                className="hidden md:flex px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg hover:from-red-600 hover:to-pink-600 transition-all shadow-md hover:shadow-lg flex items-center gap-2 font-medium"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -145,7 +158,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Main content */}
-        <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex-grow relative z-10">
+        <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex-grow relative z-10 overflow-x-hidden">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-4">
               {error}
